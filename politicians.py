@@ -20,8 +20,9 @@ for party in ["D", "R", "I"]:
             except KeyError:
                 continue
     print len(handles)
-    with open('./%s.txt' % party, 'w') as f:
-        f.write('%s = [' % party)
+    with open('./%s.py' % party, 'w') as f:
+        f.write('#!/usr/bin/python\n\n')
+        f.write("%s = ['" % party)
         for handle in handles:
-            f.write("%s, " % handle)
-        f.write("]")
+            f.write("%s', '" % handle)
+        f.write("']")
