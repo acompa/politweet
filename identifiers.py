@@ -3,18 +3,29 @@ Trims Sunlight Labs API down to names, party membership, and Twitter accounts.
 """
 
 import csv
+from scraper import access_sql_db
 
-def get_congress_members():
+def get_congress_members(sql):
     """
     Obtains names, party membership, Twitter accounts for members of Congress.
-    Writes info out to a CSV file.
+    Writes info out to SQLite db.
     """
+    # Open raw data file and grab relevant columns.
     with open('legislators_raw.csv', 'r') as f:
         data = csv.reader(f)
-        out = csv.writer(open('legislators.csv', 'w'), delimiter=',')
         for row in data:
             if row[21] is not "":
-                out.writerow([row[0], row[1], row[2], row[3], row[6], row[21]])
-            
+                t = (row[0], row[1], row[2], row[3], row[6], row[21])
+                sql.execute(""" insert into identifiers 
+                            (title, firstname, midname, lastname, party, twitter_id) 
+                            values (?,?,?,?,?,?) """, t)
+
 def main():
-    get_congress_members()
+    db, sql = access_sql_db()
+    sql.execute("drop table identifiers")
+    sql.execute(""" create table identifiers (title text, firstname text, 
+                midname text, lastname text, party test, twitter_id text)""")
+    get_congress_members(sql)
+
+    # Save changes.
+    db.commit()

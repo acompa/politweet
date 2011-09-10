@@ -17,7 +17,7 @@ def access_sql_db():
     db = sqlite3.connect('data/tweets')
     db.text_factory = str
     sql = db.cursor()
-    return sql
+    return db, sql
 
 def scrape_timeline(row, API, sql):
     """ Scrape legislator's timeline. """
@@ -64,7 +64,7 @@ def main():
     timelines out to SQLite. 
     """
     API = twitter_auth()
-    sql = access_sql_db()
+    db, sql = access_sql_db()
 
     with open('legislators.csv', 'r') as f:
         legislators = csv.reader(f)
