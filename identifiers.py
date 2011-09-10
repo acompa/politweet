@@ -14,11 +14,10 @@ def get_congress_members(sql):
     with open('legislators_raw.csv', 'r') as f:
         data = csv.reader(f)
         for row in data:
-            if row[21] is not "":
-                t = (row[0], row[1], row[2], row[3], row[6], row[21])
-                sql.execute(""" insert into identifiers 
-                            (title, firstname, midname, lastname, party, twitter_id) 
-                            values (?,?,?,?,?,?) """, t)
+            t = (row[0], row[1], row[2], row[3], row[6], row[21])
+            sql.execute(""" insert into identifiers 
+                        (title, firstname, midname, lastname, party, twitter_id) 
+                        values (?,?,?,?,?,?) """, t)
 
 def main():
     db, sql = access_sql_db()
