@@ -1,4 +1,8 @@
+# The usual suspects.
 *.pyc
 *~
 *.txt
 *.csv
+
+# Credentials.
+creds.py
