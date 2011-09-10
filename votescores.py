@@ -2,13 +2,16 @@ import sqlite3
 import urllib2
 import re
 import csv
+
 from BeautifulSoup import BeautifulSoup
+from scraper import access_sql_db
 
 def get_liberal_scores():
     """
     Scraping liberal-biased scores from That's My Congress.
     May only use these scores, depending on merge difficulty.
     """
+
     URLs = ["http://thatsmycongress.com/senate/index.html",
             "http://thatsmycongress.com/house/index.html"]
     senators = {}
@@ -26,25 +29,12 @@ def get_liberal_scores():
                 if u"Senator" in link.contents[0]:
                     name = link.contents[0].encode('utf-8')
                     name = name[name.find(' ') + 1:]
-#                    index = name.find(' ', 8, -1)
-#                    lastname = name[index + 1:].lower()
-#                    # Clean last names one more time--we don't want middle 
-#                    # names!
-#                    if lastname.find(' ') is not -1:
-#                        index = lastname.find(' ')
-#                        lastname = lastname[index + 1:]
                     senators.setdefault(name, {})
                     senators[name].setdefault('lib', 0)
 
                 elif u"Rep." in link.contents[0]:
                     name = link.contents[0].encode('utf-8')
                     name = name[name.find(' ') + 1:]
-#                    index = name.find(' ', 5, -1)
-#                     lastname = name[index + 1:].lower()
-#                     # Same as above--drop all middle names.
-#                     if lastname.find(' ') is not -1:
-#                         index = lastname.find(' ')
-#                         lastname = lastname[index + 1:]
                     reps.setdefault(name, {})
                     reps[name].setdefault('lib', 0)
                     scrapingReps = True
@@ -110,33 +100,46 @@ def get_conservative_scores():
 def update_sql_db(senators, reps, sql):
     """ Adding data to SQLite db. """
 
+    # Recreating table with each run. Not efficient, but this is shortcut
+    # code while I alter table structure to facilitate merge.
     sql.execute("drop table reps")
     sql.execute("drop table senators")    
-    try:
-        sql.execute("create table reps (name text, libscore int)")
-        sql.execute("create table senators (name text, libscore int)")
-    except sqlite3.OperationalError:
-        pass
+    sql.execute("""create table reps (firstname text, lastname text, 
+                libscore int)""")
+    sql.execute("""create table senators (firstname text, lastname text, 
+                libscore int)""")
 
+    # Take names, split them into first/last names, then add all to SQLite.
     try:
         for name in reps:
-            t = (name, reps[name]['lib'])
-            sql.execute("insert into reps (name,libscore) values (?,?)", t)
+            fname, lname = split_full_name(name)
+            t = (fname, lname, reps[name]['lib'])
+            sql.execute("""insert into reps (firstname,lastname,libscore) 
+                        values (?,?,?)""", t)
 
         for name in senators:
-            t = (name, senators[name]['lib'])
-            sql.execute("insert into senators (name,libscore) values (?,?)", t)
+            fname, lname = split_full_name(name)
+            t = (fname, lname, senators[name]['lib'])
+            sql.execute("""insert into senators (firstname,lastname,libscore)
+                        values (?,?,?)""", t)
     except sqlite3.InterfaceError:
         if name in reps:
             print name, reps[name]
         else:
             print name, senators[name]
 
+# Utility functions for formatting text.
+def split_full_name(name):
+    """ Splits full names into first and last names. """
+    index = name.find(' ')
+    fname = name[:index]
+    lname = name[index + 1:]
+    return fname, lname
+
+# Final script.
 def main():
     # Start SQLite connection.
-    db = sqlite3.connect('./tweets')
-    db.text_factory = str
-    sql = db.cursor()
+    sql = access_sql_db()
 
     # Add scores to db.
     senators, reps = get_liberal_scores()

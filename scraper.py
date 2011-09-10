@@ -12,14 +12,11 @@ def twitter_auth():
     auth.set_access_token(A_TOKEN, A_SECRET)
     return tweepy.API(auth)
 
-def initialize_sql_db():
+def access_sql_db():
     """ Instantiate SQLite db and table for tweets. """
-    db = sqlite3.connect('./tweets_sunlight')
+    db = sqlite3.connect('data/tweets')
+    db.text_factory = str
     sql = db.cursor()
-    sql.execute("delete from tweets")
-    #sql.execute("""create table tweets
-    #            (id integer primary key asc autoincrement, fname text, lname 
-    #            text, party text, tweet text)""")
     return sql
 
 def scrape_timeline(row, API, sql):
@@ -67,7 +64,7 @@ def main():
     timelines out to SQLite. 
     """
     API = twitter_auth()
-    sql = initialize_sql_db()
+    sql = access_sql_db()
 
     with open('legislators.csv', 'r') as f:
         legislators = csv.reader(f)

@@ -14,7 +14,7 @@ def get_congress_members():
         out = csv.writer(open('legislators.csv', 'w'), delimiter=',')
         for row in data:
             if row[21] is not "":
-                out.writerow([row[0], row[1], row[3], row[6], row[21]])
+                out.writerow([row[0], row[1], row[2], row[3], row[6], row[21]])
             
 def main():
     get_congress_members()
