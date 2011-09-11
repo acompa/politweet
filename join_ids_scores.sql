@@ -1,6 +1,7 @@
 -------
 --
--- Match scores to each politician's tweets.
+-- Match scores to each politician's tweets. I could have probably
+-- accomplished this in Python, but I need SQL practice.
 -- -AC, 9/10/11 (lol!)
 --
 -------
