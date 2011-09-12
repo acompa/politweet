@@ -7,12 +7,12 @@ class TweetClassifier():
         self.tweet_class_count.setdefault('D', 0)
         self.tweet_class_count.setdefault('R', 0)
 
-        self.features = {}
         # Will track four counts for each feature:
         # 1. A weighted count for Dems based on the legislator's voting score.
         # 2. Same as #1, but for GOP.
         # 3. The number of times the feature appears in a Dem tweet.
         # 4. Same as #3, but for GOP.
+        self.features = {}
 
         # Track tweets at other users independently of words.
         self.features.setdefault('*tweet_at*', {})
@@ -37,8 +37,6 @@ class TweetClassifier():
     #######
     def increment_tweet_class_count(row):
         """ Increase tweet class count by one. """
-
-        # NOTE: how do I pull score, party from a raw SQLite row?
         party = row[1]
         score = row[3]
         tweet_class = identify_voter_party(score, party)
