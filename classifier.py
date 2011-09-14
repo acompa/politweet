@@ -123,8 +123,8 @@ class TweetClassifier():
             return 'D'
         return party
 
-    def classify_words(self, row):
-        """ Accepts a list of words from each tweet. """
+    def train(self, row):
+        """ Trains classifier using a row from the training set. """
         party = row[1]
         score = row[3]
         tweet_class = self.id_voter_party(score, party)
