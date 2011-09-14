@@ -62,12 +62,17 @@ class TweetClassifier():
 
     def get_prob(self, word, tweet_class):
         """ 
-        P(word | class): probability that a word appears in a tweet given the 
+        P(feature | class): probability that a feature appears in a tweet given the 
         tweet's class.
+        
+        P(feature | class) = P(features appear in class) / P(class)
+        
+        We have no prior reason to assume P("Dem") != P("GOP"), so let's assume
+        P("Dem") = P("GOP") = 0.5 for now.
         """
-        total_count = self.get_tweet_class_count(tweet_class)
-        feature_count = self.get_feature_count(word, tweet_class)
-        return feature_count / total_count
+        prior = 0.5
+        features_per_class = self.get_feature_count(word, tweet_class)
+        return features_per_class / prior
 
     #######
     ## The next set of methods deal with features within tweets.
