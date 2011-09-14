@@ -62,13 +62,14 @@ def main():
     #
     # TO DO: select rows at random from sample. Partition sample into training
     # and test subsets for both reps and senators. SQLite pseudocode below:
-    # limit = DB.execute("""select count(*) from reps_score_tweets""")
-    # training_set = DB.execute("""create table reps_training as (select tweet, party, libscore from 
+    # limit = 0.3 * DB.execute("""select count(*) from reps_score_tweets""")
+    # test_set = DB.execute("""create table reps_test as (select tweet, party, libscore from 
     #                           reps_score_tweets order by random() limit 
     #                           ?)""", limit)
-    # test_set = DB.execute("""create table reps_test as ((select tweet, party, libscore from 
+    # # Don't actually need to create the training set--just subset the general table.
+    # training_set = DB.execute("""(select tweet, party, libscore from 
     #                       reps_score_tweets) except (select tweet, party, libscore from 
-    #                       reps_training))""")
+    #                       reps_test))""")
     
     for row in DB.execute("""select tweet, party, libscore from 
                           reps_score_tweets"""):
