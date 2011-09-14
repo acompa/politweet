@@ -33,7 +33,7 @@ class TweetClassifier():
         self.features['*hashtag*']['R'].setdefault('weight', 0)
 
     #######
-    ## These methods deal with characteristics of the tweet's author.
+    ## These methods help tally up tweet counts for a class.
     #######
     def increment_tweet_class_count(self, row):
         """ Increase tweet class count by one. """
@@ -53,12 +53,22 @@ class TweetClassifier():
             total += tweet_class_count[c]
         return c
 
+    def get_prob(self, word, tweet_class):
+        """ 
+        P(word | class): probability that a word appears in a tweet given the 
+        tweet's class.
+        """
+        total_count = self.get_tweet_class_count(tweet_class)
+        feature_count = self.get_feature_count(word, tweet_class)
+        return feature_count / total_count
+
     #######
     ## The next set of methods deal with features within tweets.
     #######
     def split_words(self, row):
         """ Splits tweets into a list of words. """
         tweet = row[2]
+        # I should just split on blank spaces...
         r = re.compile(r'[^a-zA-z0-9_@#]')
         return r.split(r, tweet)
 
@@ -130,34 +140,8 @@ class TweetClassifier():
             return float(self.features[word][tweet_class]['weight'])
         return 0.0
 
-    def get_total_count(self, word, tweet_class):
-        """ Returns number of times word appears in all tweets. """
+    def get_feature_count(self, word, tweet_class):
+        """ Returns number of times word appears in tweets for a given class.. """
         if word in self.features and tweet_class in self.features[word]:
             return self.features[word][tweet_class]['count']
         return 0
-
-def main():
-    """
-    Main script.
-
-    NOTE: as a future extension, consider one trainer for each congressional
-    body. How do senators, reps tweet?
-    """
-      
-    DB = sqlite3.connect("./tweets")
-    TRAINER = TweetClassifier()
-
-    # TO DO: select rows at random from sample. Partition sample into training
-    # and test subsets.
-    for row in DB.execute("""select tweet, party, libscore from 
-                          reps_score_tweets"""):
-        TRAINER.increment_tweet_class_count(row)
-        TRAINER.classify_words(row)
-
-    for row in DB.execute("""select tweet, party, libscore from 
-                          sens_score_tweets"""):
-        TRAINER.increment_tweet_class_count(row)
-        TRAINER.classify_words(row)
-
-    TRAINER.get_tweet_class_count('D')
-    TRAINER.get_tweet_class_count('R')
