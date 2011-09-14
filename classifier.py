@@ -7,6 +7,13 @@ class TweetClassifier():
         self.tweet_class_count.setdefault('D', 0)
         self.tweet_class_count.setdefault('R', 0)
 
+        # Will track three types of features initially:
+        # 1. Words found in tweets.
+        # 2. Tweets at other users ("@").
+        # 3. Hashtags.
+        # 
+        # Potential future features: images, links.
+
         # Will track four counts for each feature:
         # 1. A weighted count for Dems based on the legislator's voting score.
         # 2. Same as #1, but for GOP.
@@ -33,9 +40,9 @@ class TweetClassifier():
         self.features['*hashtag*']['R'].setdefault('weight', 0)
 
     #######
-    ## These methods help tally up tweet counts for a class.
+    ## These methods help tally tweet counts for a class.
     #######
-    def increment_tweet_class_count(self, row):
+    def inc_tweet_class_count(self, row):
         """ Increase tweet class count by one. """
         party = row[1]
         score = row[3]
@@ -72,36 +79,12 @@ class TweetClassifier():
         r = re.compile(r'[^a-zA-z0-9_@#]')
         return r.split(r, tweet)
 
-    def classify_words(self, row):
-        """ Accepts a list of words from each tweet. """
-        party = row[1]
-        score = row[3]
-        tweet_class = self.identify_voter_party(score, party)
-        words = self.split_words(row)
-
-        for word in words:
-
-            # Hashtag or @? Increment and move on.
-            if word.find('@') > -1:
-                self.increment_tweet_at(score, tweet_class)
-                continue
-            elif word.find('#') > -1:
-                self.increment_hashtag(score, tweet_class)
-                continue
-
-            # Otherwise, increment count for this word.
-            self.features.setdefault(word, {})
-            self.features[word].setdefault(tweet_class, 0)
-            self.features[word][tweet_class].setdefault('count', 0)
-            self.features[word][tweet_class].setdefault('weight', 0)
-            self.increment_feature_count(word, score, tweet_class)
-
-    def increment_feature_count(self, word, score, tweet_class):
+    def inc_word_count(self, word, score, tweet_class):
         """ Increment weighted count and count for a given word. """
         self.features[word][tweet_class]['weight'] += abs(score)/100 
         self.features[word][tweet_class]['count'] += 1
 
-    def increment_tweet_at(self, score, tweet_class):
+    def inc_tweet_at(self, score, tweet_class):
         """ 
         Increase tweet_at by legislator's vote score, and increase tally
         by one.
@@ -109,7 +92,7 @@ class TweetClassifier():
         self.features['*tweet_at*'][tweet_class]['weight'] += abs(score)/100
         self.features['*tweet_at*'][tweet_class]['count'] += 1
 
-    def increment_hashtag(self, score, tweet_class):
+    def inc_hashtag(self, score, tweet_class):
         """ 
         Increment the effect of a hashtag by 'votescore'. Also tally
         number of total hashtags that appear.
@@ -117,7 +100,7 @@ class TweetClassifier():
         self.features['*hashtag*'][tweet_class]['weight'] += abs(score)/100
         self.features['*hashtag*'][tweet_class]['count'] += 1
 
-    def identify_voter_party(self, score, party):
+    def id_voter_party(self, score, party):
         """ 
         Identifies voter party based on score. Score < 0 --> GOP. 
         Score > 0 --> Dem. Obvious problems with this at the moderate end--some
@@ -133,6 +116,30 @@ class TweetClassifier():
         elif score > 0:
             return 'D'
         return party
+
+    def classify_words(self, row):
+        """ Accepts a list of words from each tweet. """
+        party = row[1]
+        score = row[3]
+        tweet_class = self.id_voter_party(score, party)
+        words = self.split_words(row)
+
+        for word in words:
+
+            # Hashtag or @? Inc and move on.
+            if word.find('@') > -1:
+                self.inc_tweet_at(score, tweet_class)
+                continue
+            elif word.find('#') > -1:
+                self.inc_hashtag(score, tweet_class)
+                continue
+
+            # Otherwise, increment count for this word.
+            self.features.setdefault(word, {})
+            self.features[word].setdefault(tweet_class, 0)
+            self.features[word][tweet_class].setdefault('count', 0)
+            self.features[word][tweet_class].setdefault('weight', 0)
+            self.inc_word_count(word, score, tweet_class)
 
     def get_weighted_score(self, word, tweet_class):
         """ Returns unweighted score for a given feature. """
