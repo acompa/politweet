@@ -11,7 +11,7 @@ def get_congress_members(sql):
     Writes info out to SQLite db.
     """
     # Open raw data file and grab relevant columns.
-    with open('legislators_raw.csv', 'r') as f:
+    with open('sunlight.csv', 'r') as f:
         data = csv.reader(f)
         for row in data:
             t = (row[0], row[1], row[2], row[3], row[6], row[21])
@@ -28,3 +28,6 @@ def main():
 
     # Save changes.
     db.commit()
+
+if __name__ == "__main__":
+    main()

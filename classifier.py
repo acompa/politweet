@@ -81,9 +81,7 @@ class TweetClassifier():
     def split_words(self, row):
         """ Splits tweets into a list of words. """
         tweet = row[2]
-        # I should just split on blank spaces...
-        r = re.compile(r'[^a-zA-z0-9_@#]')
-        return r.split(r, tweet)
+        yield tweet.split()        
 
     def inc_word_count(self, word, score, tweet_class):
         """ Increment weighted count and count for a given word. """
@@ -109,8 +107,9 @@ class TweetClassifier():
     def id_voter_party(self, score, party):
         """ 
         Identifies voter party based on score. Score < 0 --> GOP. 
-        Score > 0 --> Dem. Obvious problems with this at the moderate end--some
-        voters may identify one way and vote another. 
+        Score > 0 --> Dem. Score = 0 --> return voter's self-id'd party.
+        Obvious problems with this at the moderate end--some voters may 
+        identify one way and vote another. 
 
         NOTE: Consider two classifications: one by legislator's 
         self-identification, another by legislator's vote record.

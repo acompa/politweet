@@ -4,7 +4,7 @@ import math
 
 from classifier import TweetClassifier
 
-class NBClassifier(classifier.TweetClassifier):
+class NBClassifier(TweetClassifier):
     """
     A subclass of the general classifier. Inherits feature-counting
     methods and dicts. Will also calculate probability using Bayes's
@@ -19,7 +19,7 @@ class NBClassifier(classifier.TweetClassifier):
 
         return float(count/total)
 
-    def classify(self, tweet, tweet_class):
+    def classify(self, tweet):
         """ 
         Returns the probability that a tweet falls into a class given
         the features in that tweet (or: P(class | features) ).
@@ -44,8 +44,10 @@ class NBClassifier(classifier.TweetClassifier):
         words = self.split_words(tweet)
         eta = 0
         for word in words:
-            exponent += math.ln(1 - get_prob(word, "D")_ - math.ln(get_prob(word, "D")))
-        return 1 / (1 + exp(eta))
+            eta += math.ln(1 - get_prob(word, "D") - math.ln(get_prob(word, "D")))
+        if  1 / (1 + exp(eta)) > 0.5:
+            return "D"
+        return "R"
 
 def main():
     """
@@ -55,42 +57,42 @@ def main():
     body. How do senators, reps tweet?
     """
       
-    DB = sqlite3.connect("./tweets")
+    DB = sqlite3.connect("data/tweets")
     CLASSIFIER = TweetClassifier()
 
     # Train the classifier using sample of legislators' tweets.
     #
     # TO DO: select rows at random from sample. Partition sample into training
     # and test subsets for both reps and senators. SQLite pseudocode below:
-    # limit = 0.3 * DB.execute("""select count(*) from reps_score_tweets""")
-    # test_set = DB.execute("""create table reps_test as (select tweet, party, libscore from 
-    #                           reps_score_tweets order by random() limit 
-    #                           ?)""", limit)
+    limit = 0.3 * DB.execute("""select count(distinct id) from 
+                             reps_scored_tweets""")
+    test_set = DB.execute("""create table reps_test as (select tweet, party, 
+                          libscore from reps_scored_tweets order by random() 
+                          limit ?)""", limit)
     # # Don't actually need to create the training set--just subset the general table.
-    # training_set = DB.execute("""(select tweet, party, libscore from 
-    #                       reps_score_tweets) except (select tweet, party, libscore from 
-    #                       reps_test))""")
+    training_set = DB.execute("""(select tweet, party, libscore from 
+                              reps_scored_tweets) except (select tweet, party, 
+                              libscore from reps_test))""")
     
     for row in DB.execute("""select tweet, party, libscore from 
-                          reps_score_tweets"""):
-        TRAINER.increment_tweet_class_count(row)
-        TRAINER.classify_words(row)
+                          reps_scored_tweets"""):
+        TRAINER.inc_tweet_class_count(row)
+        TRAINER.train(row)
 
     for row in DB.execute("""select tweet, party, libscore from 
-                          sens_score_tweets"""):
-        TRAINER.increment_tweet_class_count(row)
-        TRAINER.classify_words(row)
+                          sens_scored_tweets"""):
+        TRAINER.inc_tweet_class_count(row)
+        TRAINER.train(row)
 
-    CLASSIFIER.get_tweet_class_count('D')
-    CLASSIFIER.get_tweet_class_count('R')
-        
     # Now attempt to classify tweets in test set.
-    ...
+    total = 0
+    correct = 0
     for tweet in test_set:
-        print "Prob. tweet is Dem: %i" % CLASSIFIER.classify(tweet, "D")
-        print "Prob. tweet is GOP: %i" % CLASSIFIER.classify(tweet, "R")
-        print "Tweet's class: %s" % tweet[1]
+        total += 1
+        if CLASSIFIER.classify(tweet) == tweet[1]:
+            correct += 1
+        print "Accuracy: %d / %d: %.2d" % (correct, total, correct/total)
 
 # Run main() from bash.
-if "__name__" == "__main__":
+if __name__ == "__main__":
     main()
