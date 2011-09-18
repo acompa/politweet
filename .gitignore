@@ -11,3 +11,6 @@ creds.py
 D.py
 I.py
 R.py
+
+# Skip this SQL script.
+join_names*.sql

@@ -14,11 +14,6 @@ class TweetClassifier():
         # 
         # Potential future features: images, links.
 
-        # Will track four counts for each feature:
-        # 1. A weighted count for Dems based on the legislator's voting score.
-        # 2. Same as #1, but for GOP.
-        # 3. The number of times the feature appears in a Dem tweet.
-        # 4. Same as #3, but for GOP.
         self.features = {}
 
         # Track tweets at other users, hashtags, and links independently
@@ -35,15 +30,12 @@ class TweetClassifier():
     #######
     ## These methods help tally tweet counts for a class.
     #######
-    def inc_tweet_class_count(self, row):
-        """ Increase tweet class count by one. """
-        party = row[1]
-        score = row[2]
-        tweet_class = self.id_voter_party(score, party)
+    def inc_tweet_class_count(self, tweet_class):
+        """ Increase count of features in a tweet class by one. """
         self.tweet_class_count[tweet_class] += 1
 
     def get_tweet_class_count(self, tweet_class):
-        """ Return the number of tweets in a given class. """
+        """ Return the number of features in a given class. """
         return self.tweet_class_count[tweet_class]
 
     def get_total_count(self):
@@ -66,7 +58,9 @@ class TweetClassifier():
         """
         prior = 0.5
         features_per_class = self.get_feature_count(word, tweet_class)
-        return features_per_class / prior
+        print features_per_class
+        print self.get_tweet_class_count(tweet_class)
+        return features_per_class / self.get_tweet_class_count(tweet_class)
 
     #######
     ## The next set of methods deal with features within tweets.
@@ -134,6 +128,7 @@ class TweetClassifier():
         words = self.split_words(row)
 
         for word in words:
+            self.inc_tweet_class_count(tweet_class)
             # Hashtag or @? Inc and move on.
             if word == '"':
                 continue

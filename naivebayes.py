@@ -44,6 +44,7 @@ class NBClassifier(TweetClassifier):
         words = self.split_words(tweet)
         eta = 0
         for word in words:
+            print self.get_prob(word, "D")
             eta += math.log(1 - self.get_prob(word, "D")) - math.log(
                     self.get_prob(word, "D"))
         if  1 / (1 + exp(eta)) > 0.5:
@@ -82,7 +83,6 @@ def main():
                               libscore from reps_test""")
     
     for row in training_set:
-        CLASSIFIER.inc_tweet_class_count(row)
         CLASSIFIER.train(row)
 
 #     for row in DB.execute("""select tweet, party, libscore from 
