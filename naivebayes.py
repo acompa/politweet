@@ -43,11 +43,16 @@ class NBClassifier(TweetClassifier):
         """
         words = self.split_words(tweet)
         eta = 0
+
         for word in words:
-            print self.get_prob(word, "D")
-            eta += math.log(1 - self.get_prob(word, "D")) - math.log(
-                    self.get_prob(word, "D"))
-        if  1 / (1 + exp(eta)) > 0.5:
+            try:
+                eta += math.log(1 - self.get_prob(word, "D")) - math.log(
+                       self.get_prob(word, "D"))
+            except ValueError:
+                # Skip word if not found in trainer.
+                continue
+
+        if  1 / (1 + math.exp(eta)) > 0.5:
             return "D"
         return "R"
 
@@ -98,7 +103,8 @@ def main():
         total += 1
         if CLASSIFIER.classify(tweet) == tweet[1]:
             correct += 1
-    print "Accuracy: %d / %d: %.2d" % (correct, total, correct/total)
+    print "Accuracy: %d / %d: %.2f" % (correct, total, 
+                                       float(correct)/float(total))
 
 # Run main() from bash.
 if __name__ == "__main__":

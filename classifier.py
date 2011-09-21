@@ -1,6 +1,8 @@
 import sqlite3
 import re
 
+from unicodedata import normalize
+
 class TweetClassifier():
     def __init__(self):
         self.tweet_class_count = {}
@@ -56,11 +58,13 @@ class TweetClassifier():
         P("Dem") = P("GOP") = 0.5 for now. I might change this to the proportion
         of legislators for a given party later on.
         """
-        prior = 0.5
-        features_per_class = self.get_feature_count(word, tweet_class)
-        print features_per_class
-        print self.get_tweet_class_count(tweet_class)
-        return features_per_class / self.get_tweet_class_count(tweet_class)
+        try:
+            feature_count = self.get_feature_count(word, tweet_class)
+        except KeyError:
+            raise ValueError
+        if feature_count == 0:
+            raise ValueError
+        return feature_count / self.get_tweet_class_count(tweet_class)
 
     #######
     ## The next set of methods deal with features within tweets.
@@ -68,8 +72,11 @@ class TweetClassifier():
     def split_words(self, row):
         """ Splits tweets into a list of words. """
         tweet = row[0]
+        r = re.compile(u'[^a-zA-Z@#://]')
         for word in tweet.split():
-            yield word
+            word = normalize('NFKD', word)
+            r.sub('', word)
+            yield word.lower()
 
     def inc_word_count(self, word, score, tweet_class):
         """ Increment weighted count and count for a given word. """
@@ -144,7 +151,8 @@ class TweetClassifier():
 
             # Otherwise, increment count for this word.
             self.features.setdefault(word, {})
-            self.features[word].setdefault(tweet_class, {})
+            self.features[word].setdefault('D', {})
+            self.features[word].setdefault('R', {})
             self.features[word][tweet_class].setdefault('count', 0)
             self.features[word][tweet_class].setdefault('weight', 0)
             self.inc_word_count(word, score, tweet_class)
@@ -156,7 +164,16 @@ class TweetClassifier():
         return 0.0
 
     def get_feature_count(self, word, tweet_class):
-        """ Returns number of times word appears in tweets for a given class.. """
-        if word in self.features and tweet_class in self.features[word]:
+        """ 
+        Returns number of times word appears in tweets for a given class.
+        Also manages links, hashtags, tweets at other users.
+        """
+        if word.find('http://') > -1:
+            return self.features['*link*'][tweet_class]['count']
+        elif word.find('@') > -1:
+            return self.features['*tweet_at*'][tweet_class]['count']
+        elif word.find('#') > -1:
+            return self.features['*hashtag*'][tweet_class]['count']
+        elif word in self.features:
             return self.features[word][tweet_class]['count']
         return 0
