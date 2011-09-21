@@ -17,9 +17,6 @@ class TweetClassifier():
         # Potential future features: images, links.
 
         self.features = {}
-
-        # Track tweets at other users, hashtags, and links independently
-        # of words.
         for element in ['*tweet_at*', '*hashtag*', '*link*']:
             self.features.setdefault(element, {})
             self.features[element].setdefault('D', {})
@@ -49,19 +46,20 @@ class TweetClassifier():
 
     def get_prob(self, word, tweet_class):
         """ 
-        Returns P(feature | class): probability that a feature appears in a tweet 
-        given the tweet's class.
+        Returns P(feature | class): probability that a feature appears in a 
+        tweet given the tweet's class.
         
         P(feature | class) = P(features appear in class) / P(class)
         
-        We have no prior reason to assume P("Dem") != P("GOP"), so let's assume
-        P("Dem") = P("GOP") = 0.5 for now. I might change this to the proportion
-        of legislators for a given party later on.
+        We have no prior reason to assume P("Dem") != P("GOP"), so assume
+        P("Dem") = P("GOP") = 0.5 for now. Might change this later.
+        --AC, 9/13/11
         """
         try:
             feature_count = self.get_feature_count(word, tweet_class)
         except KeyError:
             raise ValueError
+
         if feature_count == 0:
             raise ValueError
         return feature_count / self.get_tweet_class_count(tweet_class)
@@ -113,11 +111,9 @@ class TweetClassifier():
         """ 
         Identifies voter party based on score. Score < 0 --> GOP. 
         Score > 0 --> Dem. Score = 0 --> return voter's self-id'd party.
+
         Obvious problems with this at the moderate end--some voters may 
         identify one way and vote another. 
-
-        NOTE: Consider two classifications: one by legislator's 
-        self-identification, another by legislator's vote record.
         """
 
         # Comment first four lines out, depending on how I treat moderates.

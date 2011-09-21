@@ -3,6 +3,7 @@ import re
 import math
 
 from classifier import TweetClassifier
+from utilities import partition_sample
 
 class NBClassifier(TweetClassifier):
     """
@@ -24,15 +25,7 @@ class NBClassifier(TweetClassifier):
         Returns the probability that a tweet falls into a class given
         the features in that tweet (or: P(class | features) ).
         
-        Given the NB assumption of feature independence, we can simply
-        multiply the probabilities for each feature like so:
-        
-        P(class | features) =              p_x1 * p_x2 * ... * p_xn
-                              ___________________________________________________
-                              (p_x1 * ... * p_xn) + [ (1-p_x1) * ... * (1-p_xn) ]
-                              
-        where p_xi = P(feature | class) aka TweetClassifier.get_prob(). Using 
-        natural logs, this can be simplified to:
+        Using natural logs, this can be simplified to:
         
         P(class | features) = 1 / (1 + e^eta), eta = sum( ln(1-p_xi) - ln(p_i))
         
@@ -56,6 +49,25 @@ class NBClassifier(TweetClassifier):
             return "D"
         return "R"
 
+def test_classifier(CLASSIFIER, DB, group):
+    """
+    Group overhead for classifier into a program and run it. Prints resulting
+    accuracy for group.
+    """
+
+    total = 0
+    correct = 0
+    test_set = DB.execute("select tweet, party, libscore from %s_test" % group)
+
+    # Loop over test 
+    for tweet in test_set:
+        total += 1
+        if CLASSIFIER.classify(tweet) == tweet[1]:
+            correct += 1
+    print "Accuracy (%s): %d / %d: %.2f" % (group, correct, total, 
+                                       float(correct)/float(total))
+
+
 def main():
     """
     Main script.
@@ -67,44 +79,22 @@ def main():
     DB = sqlite3.connect("data/tweets")
     CLASSIFIER = NBClassifier()
 
-    # Train the classifier using sample of legislators' tweets.
-    #
-    # Note error in DB setup: legislators' tweets are ACTUALLY in the "party"
-    # column of 'tweets' table. Similarly, self-id'd party is in the 'tweet'
-    # column of 'tweets' table. Whoops.
-    # -AC, 9/18/11
-    
-    # There are 188331 unique tweets in the data. Partition 30% as a test set,
-    # create a reps_test table, then create the training set from the 
-    # compliment of it.
-    limit = int(0.3 * 188331)
-    print limit
-    DB.execute("drop table reps_test")
-    DB.execute("""create table reps_test as select tweet, party, libscore 
-               from reps_scored_tweets order by random() limit %i""" % limit)
-    # # Don't actually need to create the training set--just subset the general table.
-    training_set = DB.execute("""select tweet, party, libscore from 
-                              reps_scored_tweets except select tweet, party, 
-                              libscore from reps_test""")
-    
+    # Train the classifier using sample of legislators' tweets.    
+    r_limit = int(0.3 * 188331)
+    training_set = partition_sample(r_limit, DB, 'r')    
     for row in training_set:
         CLASSIFIER.train(row)
 
-#     for row in DB.execute("""select tweet, party, libscore from 
-#                           sens_scored_tweets"""):
-#         CLASSIFIER.inc_tweet_class_count(row)
-#         CLASSIFIER.train(row)
-
     # Now attempt to classify tweets in test set.
-    total = 0
-    correct = 0
-    test_set = DB.execute("select tweet, party, libscore from reps_test")
-    for tweet in test_set:
-        total += 1
-        if CLASSIFIER.classify(tweet) == tweet[1]:
-            correct += 1
-    print "Accuracy: %d / %d: %.2f" % (correct, total, 
-                                       float(correct)/float(total))
+    test_classifier(CLASSIFIER, DB, 'reps')
+
+    s_limit = int(0.3 * 29463)
+    training_set = partition_sample(r_limit, DB, 'd')    
+    for row in training_set:
+        CLASSIFIER.train(row)
+
+    # Same thing for senators.
+    test_classifier(CLASSIFIER, DB, 'sens')
 
 # Run main() from bash.
 if __name__ == "__main__":
