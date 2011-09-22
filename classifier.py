@@ -35,7 +35,7 @@ class TweetClassifier():
 
     def get_tweet_class_count(self, tweet_class):
         """ Return the number of features in a given class. """
-        return self.tweet_class_count[tweet_class]
+        return float(self.tweet_class_count[tweet_class])
 
     def get_total_count(self):
         """ Return total number of observations in training set. """
@@ -49,14 +49,14 @@ class TweetClassifier():
         Returns P(feature | class): probability that a feature appears in a 
         tweet given the tweet's class.
         
-        P(feature | class) = P(features appear in class) / P(class)
+        P(feature | class) = P(feature appear in class) / P(class)
         
         We have no prior reason to assume P("Dem") != P("GOP"), so assume
         P("Dem") = P("GOP") = 0.5 for now. Might change this later.
         --AC, 9/13/11
         """
         try:
-            feature_count = self.get_feature_count(word, tweet_class)
+            feature_count = float(self.get_feature_count(word, tweet_class))
         except KeyError:
             raise ValueError
 

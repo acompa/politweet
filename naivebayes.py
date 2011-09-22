@@ -32,18 +32,19 @@ class NBClassifier(TweetClassifier):
         to avoid floating-point underflow.
         
         (thanks to anonymous Wikipedia editors for this tip: 
-        http://en.wikipedia.org/wiki/Bayesian_spam_filtering#Mathematical_foundation)
+        http://en.wikipedia.org/wiki/Bayesian_spam_filtering)
         """
         words = self.split_words(tweet)
         eta = 0
 
         for word in words:
             try:
+                print self.get_prob(word, "D")
                 eta += math.log(1 - self.get_prob(word, "D")) - math.log(
-                       self.get_prob(word, "D"))
+                         self.get_prob(word, "D"))
             except ValueError:
                 # Skip word if not found in trainer.
-                continue
+                continuef
 
         if  1 / (1 + math.exp(eta)) > 0.5:
             return "D"
@@ -57,15 +58,24 @@ def test_classifier(CLASSIFIER, DB, group):
 
     total = 0
     correct = 0
+    positives = 0
     test_set = DB.execute("select tweet, party, libscore from %s_test" % group)
 
     # Loop over test 
     for tweet in test_set:
         total += 1
-        if CLASSIFIER.classify(tweet) == tweet[1]:
+        output_class = CLASSIFIER.classify(tweet)
+
+        if output_class == tweet[1]:
             correct += 1
-    print "Accuracy (%s): %d / %d: %.2f" % (group, correct, total, 
-                                       float(correct)/float(total))
+
+        if output_class is "D":
+            positives += 1
+
+    print "Precision (%s): %d / %d: %.2f" % (group, correct, positives, 
+                                             float(correct)/float(positives))
+    print "Recall (%s): %d / %d: %.2f" % (group, correct, total, 
+                                          float(correct)/float(total))
 
 
 def main():
