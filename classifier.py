@@ -62,7 +62,7 @@ class TweetClassifier():
 
         if feature_count == 0:
             raise ValueError
-        return feature_count / self.get_tweet_class_count(tweet_class)
+        return feature_count / self.get_total_count(word)
 
     #######
     ## The next set of methods deal with features within tweets.
