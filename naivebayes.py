@@ -44,7 +44,7 @@ class NBClassifier(TweetClassifier):
                          self.get_prob(word, "D"))
             except ValueError:
                 # Skip word if not found in trainer.
-                continuef
+                continue
 
         if  1 / (1 + math.exp(eta)) > 0.5:
             return "D"

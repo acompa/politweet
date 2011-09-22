@@ -39,7 +39,7 @@ class TweetClassifier():
 
     def get_feature_count(self, word):
         """ Return total number of times a feature occurs. """
-        return self.get_feature_count_in_class(word, "D") + \\
+        return self.get_feature_count_in_class(word, "D") + \
                self.get_feature_count_in_class(word, "R")
 
     def get_feature_count_in_class(self, word, tweet_class):
