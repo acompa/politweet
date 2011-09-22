@@ -37,12 +37,25 @@ class TweetClassifier():
         """ Return the number of features in a given class. """
         return float(self.tweet_class_count[tweet_class])
 
-    def get_total_count(self):
-        """ Return total number of observations in training set. """
-        total = 0
-        for c in self.tweet_class_count:
-            total += tweet_class_count[c]
-        return c
+    def get_feature_count(self, word):
+        """ Return total number of times a feature occurs. """
+        return self.get_feature_count_in_class(word, "D") + \\
+               self.get_feature_count_in_class(word, "R")
+
+    def get_feature_count_in_class(self, word, tweet_class):
+        """ 
+        Returns number of times word appears in tweets for a given class.
+        Also manages links, hashtags, tweets at other users.
+        """
+        if word.find('http://') > -1:
+            return self.features['*link*'][tweet_class]['count']
+        elif word.find('@') > -1:
+            return self.features['*tweet_at*'][tweet_class]['count']
+        elif word.find('#') > -1:
+            return self.features['*hashtag*'][tweet_class]['count']
+        elif word in self.features:
+            return self.features[word][tweet_class]['count']
+        return 0
 
     def get_prob(self, word, tweet_class):
         """ 
@@ -56,13 +69,14 @@ class TweetClassifier():
         --AC, 9/13/11
         """
         try:
-            feature_count = float(self.get_feature_count(word, tweet_class))
+            feature_count = float(self.get_feature_count_in_class(word, 
+                                  tweet_class))
         except KeyError:
             raise ValueError
 
         if feature_count == 0:
             raise ValueError
-        return feature_count / self.get_total_count(word)
+        return feature_count / self.get_feature_count(word)
 
     #######
     ## The next set of methods deal with features within tweets.
@@ -158,18 +172,3 @@ class TweetClassifier():
         if word in self.features and tweet_class in self.features[word]:
             return float(self.features[word][tweet_class]['weight'])
         return 0.0
-
-    def get_feature_count(self, word, tweet_class):
-        """ 
-        Returns number of times word appears in tweets for a given class.
-        Also manages links, hashtags, tweets at other users.
-        """
-        if word.find('http://') > -1:
-            return self.features['*link*'][tweet_class]['count']
-        elif word.find('@') > -1:
-            return self.features['*tweet_at*'][tweet_class]['count']
-        elif word.find('#') > -1:
-            return self.features['*hashtag*'][tweet_class]['count']
-        elif word in self.features:
-            return self.features[word][tweet_class]['count']
-        return 0
