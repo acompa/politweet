@@ -1,13 +1,12 @@
 import sqlite3
 import re
-
-from unicodedata import normalize
+import unicodedata
 
 class TweetClassifier():
     def __init__(self):
-        self.tweet_class_count = {}
-        self.tweet_class_count.setdefault('D', 0)
-        self.tweet_class_count.setdefault('R', 0)
+        self.class_count = {}
+        self.class_count.setdefault('D', 0)
+        self.class_count.setdefault('R', 0)
 
         # Will track three types of features initially:
         # 1. Words found in tweets.
@@ -31,7 +30,7 @@ class TweetClassifier():
     #######
     def inc_tweet_class_count(self, tweet_class):
         """ Increase count of features in a tweet class by one. """
-        self.tweet_class_count[tweet_class] += 1
+        self.class_count[tweet_class] += 1
 
     def get_tweet_class_count(self, tweet_class):
         """ Return the number of features in a given class. """
@@ -41,6 +40,14 @@ class TweetClassifier():
         """ Return total number of times a feature occurs. """
         return self.get_feature_count_in_class(word, "D") + \
                self.get_feature_count_in_class(word, "R")
+
+    def calculate_bias(self):
+        """ 
+        Returns bias. In this case, will assume independence and set bias to
+        proportion of Democratic tweets in training set.
+        """
+        return float(self.class_count['D']) / (self.class_count['D'] + 
+                                               self.class_count['R'])
 
     def get_feature_count_in_class(self, word, tweet_class):
         """ 
@@ -54,7 +61,10 @@ class TweetClassifier():
         elif word.find('#') > -1:
             return self.features['*hashtag*'][tweet_class]['count']
         elif word in self.features:
-            return self.features[word][tweet_class]['count']
+            try:
+                return self.features[word][tweet_class]['count']
+            except KeyError:
+                pass
         return 0
 
     def get_prob(self, word, tweet_class):
@@ -74,9 +84,12 @@ class TweetClassifier():
         except KeyError:
             raise ValueError
 
+        class_prob = float(self.class_count['D']) / (
+            float(self.class_count['D']) + float(self.class_count['R']))
+
         if feature_count == 0:
             raise ValueError
-        return feature_count / self.get_feature_count(word)
+        return (feature_count / self.get_feature_count(word)) / class_prob
 
     #######
     ## The next set of methods deal with features within tweets.
@@ -86,7 +99,7 @@ class TweetClassifier():
         tweet = row[0]
         r = re.compile(u'[^a-zA-Z@#://]')
         for word in tweet.split():
-            word = normalize('NFKD', word)
+            word = unicodedata.normalize('NFKD', word)
             r.sub('', word)
             yield word.lower()
 
@@ -131,6 +144,7 @@ class TweetClassifier():
         """
 
         # Comment first four lines out, depending on how I treat moderates.
+        
         if score < 0:
             return 'R'
         elif score > 0:
@@ -142,10 +156,10 @@ class TweetClassifier():
         party = row[1]
         score = row[2]
         tweet_class = self.id_voter_party(score, party)
+        self.inc_tweet_class_count(tweet_class)
         words = self.split_words(row)
 
         for word in words:
-            self.inc_tweet_class_count(tweet_class)
             # Hashtag or @? Inc and move on.
             if word == '"':
                 continue

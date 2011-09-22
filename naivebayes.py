@@ -35,17 +35,20 @@ class NBClassifier(TweetClassifier):
         http://en.wikipedia.org/wiki/Bayesian_spam_filtering)
         """
         words = self.split_words(tweet)
+        backup = list(words)
         eta = 0
+        bias = self.calculate_bias()
+
 
         for word in words:
             try:
-                print self.get_prob(word, "D")
                 eta += math.log(1 - self.get_prob(word, "D")) - math.log(
                          self.get_prob(word, "D"))
             except ValueError:
                 # Skip word if not found in trainer.
                 continue
 
+#        if  1 / (1 + math.exp(eta)) > bias:
         if  1 / (1 + math.exp(eta)) > 0.5:
             return "D"
         return "R"
@@ -56,8 +59,13 @@ def test_classifier(CLASSIFIER, DB, group):
     accuracy for group.
     """
 
+    print CLASSIFIER.class_count['D']
+    print CLASSIFIER.class_count['R']
+    print CLASSIFIER.class_count['D'] + CLASSIFIER.class_count['R']
+
     total = 0
     correct = 0
+    true_pos = 0
     positives = 0
     test_set = DB.execute("select tweet, party, libscore from %s_test" % group)
 
@@ -68,12 +76,14 @@ def test_classifier(CLASSIFIER, DB, group):
 
         if output_class == tweet[1]:
             correct += 1
+            if output_class == "D":
+                true_pos += 1
 
         if output_class is "D":
             positives += 1
 
-    print "Precision (%s): %d / %d: %.2f" % (group, correct, positives, 
-                                             float(correct)/float(positives))
+    print "Precision (%s): %d / %d: %.2f" % (group, true_pos, positives,
+                                             0 if float(positives) == 0.0 else float(true_pos)/float(positives))
     print "Recall (%s): %d / %d: %.2f" % (group, correct, total, 
                                           float(correct)/float(total))
 
