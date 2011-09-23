@@ -28,17 +28,30 @@ class TweetClassifier():
     #######
     ## These methods help tally tweet counts for a class.
     #######
-    def inc_tweet_class_count(self, tweet_class):
-        """ Increase count of features in a tweet class by one. """
+    def inc_class_count(self, tweet_class):
+        """ Increase count of tweets in a class by one. """
         self.class_count[tweet_class] += 1
 
-    def get_tweet_class_count(self, tweet_class):
-        """ Return the number of features in a given class. """
-        return float(self.tweet_class_count[tweet_class])
+    def get_class_count(self, tweet_class):
+        """ Return the number of tweets in a given class. """
+        return float(self.class_count[tweet_class])
+
+    def get_tweet_class_prob(self, tweet_class):
+        """ Return the probability of a tweet belonging to tweet_class. """
+        total_count = self.get_class_count("D") + self.get_class_count("R")
+        return float(self.get_class_count(tweet_class)) / total_count
 
     def get_feature_count(self, word):
         """ Return total number of times a feature occurs. """
-        return self.get_feature_count_in_class(word, "D") + \
+
+        if word.find('http://') > -1:
+            word = '*link*'
+        elif word.find('@') > -1:
+            word = '*tweet_at*'
+        elif word.find('#') > -1:
+            word = '*hashtag*'
+
+        return float(self.get_feature_count_in_class(word, "D")) + \
                self.get_feature_count_in_class(word, "R")
 
     def calculate_bias(self):
@@ -55,17 +68,17 @@ class TweetClassifier():
         Also manages links, hashtags, tweets at other users.
         """
         if word.find('http://') > -1:
-            return self.features['*link*'][tweet_class]['count']
+            return float(self.features['*link*'][tweet_class]['count'])
         elif word.find('@') > -1:
-            return self.features['*tweet_at*'][tweet_class]['count']
+            return float(self.features['*tweet_at*'][tweet_class]['count'])
         elif word.find('#') > -1:
-            return self.features['*hashtag*'][tweet_class]['count']
+            return float(self.features['*hashtag*'][tweet_class]['count'])
         elif word in self.features:
             try:
-                return self.features[word][tweet_class]['count']
+                return float(self.features[word][tweet_class]['count'])
             except KeyError:
                 pass
-        return 0
+        return 0.0
 
     def get_prob(self, word, tweet_class):
         """ 
@@ -73,23 +86,16 @@ class TweetClassifier():
         tweet given the tweet's class.
         
         P(feature | class) = P(feature appear in class) / P(class)
-        
-        We have no prior reason to assume P("Dem") != P("GOP"), so assume
-        P("Dem") = P("GOP") = 0.5 for now. Might change this later.
-        --AC, 9/13/11
         """
         try:
-            feature_count = float(self.get_feature_count_in_class(word, 
-                                  tweet_class))
+            feature_count = self.get_feature_count_in_class(word, tweet_class)
         except KeyError:
             raise ValueError
 
-        class_prob = float(self.class_count['D']) / (
-            float(self.class_count['D']) + float(self.class_count['R']))
-
-        if feature_count == 0:
+        if feature_count == 0.0:
             raise ValueError
-        return (feature_count / self.get_feature_count(word)) / class_prob
+
+        return feature_count / self.get_class_count(tweet_class)
 
     #######
     ## The next set of methods deal with features within tweets.
@@ -156,7 +162,7 @@ class TweetClassifier():
         party = row[1]
         score = row[2]
         tweet_class = self.id_voter_party(score, party)
-        self.inc_tweet_class_count(tweet_class)
+        self.inc_class_count(tweet_class)
         words = self.split_words(row)
 
         for word in words:

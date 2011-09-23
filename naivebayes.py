@@ -22,36 +22,30 @@ class NBClassifier(TweetClassifier):
 
     def classify(self, tweet):
         """ 
-        Returns the probability that a tweet falls into a class given
-        the features in that tweet (or: P(class | features) ).
-        
-        Using natural logs, this can be simplified to:
-        
-        P(class | features) = 1 / (1 + e^eta), eta = sum( ln(1-p_xi) - ln(p_i))
-        
-        to avoid floating-point underflow.
-        
-        (thanks to anonymous Wikipedia editors for this tip: 
-        http://en.wikipedia.org/wiki/Bayesian_spam_filtering)
+        Rewritten. Now compares probabilities that tweet is Dem or GOP,
+        and returns a classification based on the higher probability.
+        -AC, 9/22/11
         """
         words = self.split_words(tweet)
-        backup = list(words)
-        eta = 0
-        bias = self.calculate_bias()
-
+        prob_d = 1
+        prob_r = 1
 
         for word in words:
             try:
-                eta += math.log(1 - self.get_prob(word, "D")) - math.log(
-                         self.get_prob(word, "D"))
+                prob_d *= self.get_prob(word, "D") if \
+                          self.get_prob(word, 'D') > 0 else 1
+                prob_r *= self.get_prob(word, "R") if \
+                          self.get_prob(word, 'R') > 0 else 1
             except ValueError:
                 # Skip word if not found in trainer.
                 continue
 
-#        if  1 / (1 + math.exp(eta)) > bias:
-        if  1 / (1 + math.exp(eta)) > 0.5:
-            return "D"
-        return "R"
+        prob_d *= (self.get_tweet_class_prob('D'))
+        prob_r *= (self.get_tweet_class_prob('R'))
+        #print "P(class = D): %0.2f, P(class = R): %0.2f" % (prob_d, prob_r)
+        if prob_d > prob_r:
+            return 'D'
+        return 'R'
 
 def test_classifier(CLASSIFIER, DB, group):
     """
