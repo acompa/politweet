@@ -27,6 +27,25 @@ class TweetClassifier():
             self.features[element]['R'].setdefault('count', 0)
             self.features[element]['R'].setdefault('weight', 0)
 
+        # Let's try this noise word list from Drupal.
+#         self.exclusions = ['about','after','all','also','an','and','another',
+#                            'any','are','as','at','be','because','been','before',
+#                            'being','between','both','but','by','came','can',
+#                            'come','could','did','do','each','for','from','get',
+#                            'got','has','had','he','have','her','here','him',
+#                            'himself','his','how','if','in','into','is','it',
+#                            'like','make','many','me','might','more','most',
+#                            'much','must','my','never','now','of','on','only',
+#                            'or','other','our','out','over','said','same','see',
+#                            'should','since','some','still','such','take','than',
+#                            'that','the','their','them','then','there','these',
+#                            'they','this','those','through','to','too','under',
+#                            'up','very','was','way','we','well','were','what',
+#                            'where','which','while','who','with','would','you',
+#                            'your','a','b','c','d','e','f','g','h','i','j','k',
+#                            'l','m','n','o','p','q','r','s','t','u','v','w','x',
+#                            'y','z','$','1','2','3','4','5','6','7','8','9','0',
+#                            '_', '&', '-']
         self.exclusions = ['and', 'at', 'i', 'my', 'is', 'with', '&', '"', 
                            'the', 'to', 'on', 'in', 'of', 'for', 'a', 'this',
                            'will', 'be', 'you', 'from', '-', 'our', 'we', 
@@ -112,9 +131,11 @@ class TweetClassifier():
         for f in sorted(self.features.keys(), 
                         key=lambda x: (self.features[x]['total']), 
                         reverse=True)[:n]:
-            print "%s: %i appearances (%i for Dem, %i for GOP)" % (f, 
-                self.features[f]['total'], self.features[f]['D']['count'], 
-                self.features[f]['R']['count'])
+            total = self.features[f]['total']
+            dem = self.features[f]['D']['count']
+            gop = self.features[f]['R']['count']
+            print "%s: %i appearances (%i for Dem, %i for GOP, %0.2f likelihood for Dems)" % (
+                f, total, dem, gop, 100*float(dem) / (float(dem) + float(gop)))
 
     def split_words(self, row):
         """ Splits tweets into a list of words. """
@@ -123,7 +144,7 @@ class TweetClassifier():
         for word in tweet.split():
             word = unicodedata.normalize('NFKD', word)
             r.sub('', word)
-            yield word.lower()
+            yield word
 
     def inc_word_count(self, word, score, tweet_class):
         """ Increment weighted count and count for a given word. """
