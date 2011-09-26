@@ -47,14 +47,15 @@ def test_classifier(CLASSIFIER, DB, group):
     accuracy for group.
     """
 
-    print "Trained %d Dem %s tweets" % (CLASSIFIER.class_count['D'], group)
+    print "\nTrained %d Dem %s tweets" % (CLASSIFIER.class_count['D'], group)
     print "Trained %d GOP %s tweets" % (CLASSIFIER.class_count['R'], group)
-    print "Total %s tweets: %d" % (group, CLASSIFIER.class_count['D'] + 
+    print "Total %s tweets: %d\n" % (group, CLASSIFIER.class_count['D'] + 
                                    CLASSIFIER.class_count['R'])
 
     total = 0
     correct = 0
     true_pos = 0
+    false_neg = 0
     positives = 0
     test_set = DB.execute("select tweet, party, libscore from %s_test" % group)
 
@@ -71,12 +72,17 @@ def test_classifier(CLASSIFIER, DB, group):
         if output_class is "D":
             positives += 1
 
-    print "Precision (%s): %d / %d: %.2f" % (group, true_pos, positives,
-                                             0 if float(positives) == 0.0 else 
-                                             float(true_pos)/float(positives))
-    print "Recall (%s): %d / %d: %.2f" % (group, correct, total, 
-                                          float(correct)/float(total))
+        if output_class is "R" and tweet[1] is "D":
+            false_neg += 1
 
+    print "Precision (%s): %d / %d: %0.2f" % (group, true_pos, positives,
+                                              100 * float(true_pos) / 
+                                              float(positives))
+    print "Recall (%s): %d / %d: %0.2f" % (group, true_pos, true_pos + 
+                                           false_neg,
+                                           100 * float(true_pos) / 
+                                           float(true_pos+false_neg))
+    print "Accuracy (%s): %0.2f" % (group, 100 * float(correct) / float(total))
 
 def main():
     """
@@ -97,7 +103,7 @@ def main():
 
     # Print 10 most common features in classifier, along with class info.
     print "\nMOST COMMON REP FEATURES:\n"
-    REP_CLASSIFIER.print_common_features()
+    REP_CLASSIFIER.print_common_features(n=20)
 
     # Test the classifier.
     test_classifier(REP_CLASSIFIER, DB, 'reps')
@@ -109,7 +115,7 @@ def main():
         SEN_CLASSIFIER.train(row)
 
     print "\nMOST COMMON SEN FEATURES:\n"
-    SEN_CLASSIFIER.print_common_features()
+    SEN_CLASSIFIER.print_common_features(n=20)
     
     # Test the classifier.
     test_classifier(SEN_CLASSIFIER, DB, 'sens')
