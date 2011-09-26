@@ -18,7 +18,7 @@ class NBClassifier(TweetClassifier):
         count = self.get_tweet_class_count(tweet_class)
         total = self.get_total_count()
 
-        return float(count/total)
+        return float(count)/float(total)
 
     def classify(self, tweet):
         """ 
@@ -27,22 +27,16 @@ class NBClassifier(TweetClassifier):
         -AC, 9/22/11
         """
         words = self.split_words(tweet)
-        prob_d = 1
-        prob_r = 1
+        prob_d = 0
+        prob_r = 0
 
         for word in words:
-            try:
-                prob_d *= self.get_prob(word, "D") if \
-                          self.get_prob(word, 'D') > 0 else 1
-                prob_r *= self.get_prob(word, "R") if \
-                          self.get_prob(word, 'R') > 0 else 1
-            except ValueError:
-                # Skip word if not found in trainer.
-                continue
+            prob_d += math.log(self.get_prob(word, "D"))
+            prob_r += math.log(self.get_prob(word, "R"))
 
-        prob_d *= (self.get_tweet_class_prob('D'))
-        prob_r *= (self.get_tweet_class_prob('R'))
-        #print "P(class = D): %0.2f, P(class = R): %0.2f" % (prob_d, prob_r)
+        prob_d += math.log(self.get_tweet_class_prob('D'))
+        prob_r += math.log(self.get_tweet_class_prob('R'))
+        #print "P(class = D): %0.20f  ||||  P(class = R): %0.20f" % (prob_d, prob_r)
         if prob_d > prob_r:
             return 'D'
         return 'R'
@@ -77,7 +71,8 @@ def test_classifier(CLASSIFIER, DB, group):
             positives += 1
 
     print "Precision (%s): %d / %d: %.2f" % (group, true_pos, positives,
-                                             0 if float(positives) == 0.0 else float(true_pos)/float(positives))
+                                             0 if float(positives) == 0.0 else 
+                                             float(true_pos)/float(positives))
     print "Recall (%s): %d / %d: %.2f" % (group, correct, total, 
                                           float(correct)/float(total))
 
@@ -91,24 +86,30 @@ def main():
     """
       
     DB = sqlite3.connect("data/tweets")
-    CLASSIFIER = NBClassifier()
+    REP_CLASSIFIER = NBClassifier()
 
     # Train the classifier using sample of legislators' tweets.    
-    r_limit = int(0.3 * 188331)
+    r_limit = int(0.2 * 110000)
     training_set = partition_sample(r_limit, DB, 'r')    
     for row in training_set:
-        CLASSIFIER.train(row)
+        REP_CLASSIFIER.train(row)
 
-    # Now attempt to classify tweets in test set.
-    test_classifier(CLASSIFIER, DB, 'reps')
+    # Print 10 most common features in classifier, along with class info.
+    REP_CLASSIFIER.print_common_features()
 
-    s_limit = int(0.3 * 29463)
-    training_set = partition_sample(r_limit, DB, 'd')    
+    # Test the classifier.
+    test_classifier(REP_CLASSIFIER, DB, 'reps')
+
+    SEN_CLASSIFIER = NBClassifier()
+    s_limit = int(0.2 * 29463)
+    training_set = partition_sample(s_limit, DB, 's')    
     for row in training_set:
-        CLASSIFIER.train(row)
+        SEN_CLASSIFIER.train(row)
 
-    # Same thing for senators.
-    test_classifier(CLASSIFIER, DB, 'sens')
+    SEN_CLASSIFIER.print_common_features()
+    
+    # Test the classifier.
+    test_classifier(SEN_CLASSIFIER, DB, 'sens')
 
 # Run main() from bash.
 if __name__ == "__main__":

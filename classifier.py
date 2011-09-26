@@ -1,6 +1,7 @@
 import sqlite3
 import re
 import unicodedata
+import operator
 
 class TweetClassifier():
     def __init__(self):
@@ -20,10 +21,16 @@ class TweetClassifier():
             self.features.setdefault(element, {})
             self.features[element].setdefault('D', {})
             self.features[element].setdefault('R', {})
+            self.features[element].setdefault('total', 0)
             self.features[element]['D'].setdefault('count', 0)
             self.features[element]['D'].setdefault('weight', 0)
             self.features[element]['R'].setdefault('count', 0)
             self.features[element]['R'].setdefault('weight', 0)
+
+        self.exclusions = ['and', 'at', 'i', 'my', 'is', 'with', '&', '"', 
+                           'the', 'to', 'on', 'in', 'of', 'for', 'a', 'this',
+                           'will', 'be', 'you', 'from', '-', 'our', 'we', 
+                           'about', 'that', 'are']
 
     #######
     ## These methods help tally tweet counts for a class.
@@ -54,14 +61,6 @@ class TweetClassifier():
         return float(self.get_feature_count_in_class(word, "D")) + \
                self.get_feature_count_in_class(word, "R")
 
-    def calculate_bias(self):
-        """ 
-        Returns bias. In this case, will assume independence and set bias to
-        proportion of Democratic tweets in training set.
-        """
-        return float(self.class_count['D']) / (self.class_count['D'] + 
-                                               self.class_count['R'])
-
     def get_feature_count_in_class(self, word, tweet_class):
         """ 
         Returns number of times word appears in tweets for a given class.
@@ -90,16 +89,33 @@ class TweetClassifier():
         try:
             feature_count = self.get_feature_count_in_class(word, tweet_class)
         except KeyError:
-            raise ValueError
+            feature_count = 0.0
 
-        if feature_count == 0.0:
-            raise ValueError
+        # Using Laplace smoothing. All features get +1 to avoid sparseness 
+        # issues. See Manning on NB text classifiers
+        # (http://nlp.stanford.edu/IR-book/)
+        return (feature_count + 1) / self.get_class_count(tweet_class)
 
-        return feature_count / self.get_class_count(tweet_class)
+    def calculate_bias(self):
+        """ 
+        Returns bias. In this case, will assume independence and set bias to
+        proportion of Democratic tweets in training set.
+        """
+        return float(self.class_count['D']) / (self.class_count['D'] + 
+                                               self.class_count['R'])
 
     #######
     ## The next set of methods deal with features within tweets.
     #######
+    def print_common_features(self, n=10):
+        """ Prints n most common features and their class counts. """
+        for f in sorted(self.features.keys(), 
+                        key=lambda x: (self.features[x]['total']), 
+                        reverse=True)[:n]:
+            print "%s: %i appearances (%i for Dem, %i for GOP)" % (f, 
+                self.features[f]['total'], self.features[f]['D']['count'], 
+                self.features[f]['R']['count'])
+
     def split_words(self, row):
         """ Splits tweets into a list of words. """
         tweet = row[0]
@@ -113,6 +129,7 @@ class TweetClassifier():
         """ Increment weighted count and count for a given word. """
         self.features[word][tweet_class]['weight'] += abs(score)/100 
         self.features[word][tweet_class]['count'] += 1
+        self.features[word]['total'] += 1
 
     # Replace these three functions with a single, special function.
     def inc_tweet_at(self, score, tweet_class):
@@ -122,6 +139,7 @@ class TweetClassifier():
         """
         self.features['*tweet_at*'][tweet_class]['weight'] += abs(score)/100
         self.features['*tweet_at*'][tweet_class]['count'] += 1
+        self.features['*tweet_at*']['total'] += 1
 
     def inc_link(self, score, tweet_class):
         """ 
@@ -130,6 +148,7 @@ class TweetClassifier():
         """
         self.features['*link*'][tweet_class]['weight'] += abs(score)/100
         self.features['*link*'][tweet_class]['count'] += 1
+        self.features['*link*']['total'] += 1
 
     def inc_hashtag(self, score, tweet_class):
         """ 
@@ -138,6 +157,7 @@ class TweetClassifier():
         """
         self.features['*hashtag*'][tweet_class]['weight'] += abs(score)/100
         self.features['*hashtag*'][tweet_class]['count'] += 1
+        self.features['*hashtag*']['total'] += 1
     #/replace
 
     def id_voter_party(self, score, party):
@@ -157,6 +177,9 @@ class TweetClassifier():
             return 'D'
         return party
 
+    #######
+    ## Finally, get to training.
+    #######
     def train(self, row):
         """ Trains classifier using a row from the training set. """
         party = row[1]
@@ -167,7 +190,7 @@ class TweetClassifier():
 
         for word in words:
             # Hashtag or @? Inc and move on.
-            if word == '"':
+            if word in self.exclusions:
                 continue
             elif word.find('@') > -1:
                 self.inc_tweet_at(score, tweet_class)
@@ -183,6 +206,7 @@ class TweetClassifier():
             self.features.setdefault(word, {})
             self.features[word].setdefault('D', {})
             self.features[word].setdefault('R', {})
+            self.features[word].setdefault('total', 0)
             self.features[word][tweet_class].setdefault('count', 0)
             self.features[word][tweet_class].setdefault('weight', 0)
             self.inc_word_count(word, score, tweet_class)
