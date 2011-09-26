@@ -47,9 +47,10 @@ def test_classifier(CLASSIFIER, DB, group):
     accuracy for group.
     """
 
-    print CLASSIFIER.class_count['D']
-    print CLASSIFIER.class_count['R']
-    print CLASSIFIER.class_count['D'] + CLASSIFIER.class_count['R']
+    print "Trained %d Dem %s tweets" % (CLASSIFIER.class_count['D'], group)
+    print "Trained %d GOP %s tweets" % (CLASSIFIER.class_count['R'], group)
+    print "Total %s tweets: %d" % (group, CLASSIFIER.class_count['D'] + 
+                                   CLASSIFIER.class_count['R'])
 
     total = 0
     correct = 0
@@ -95,6 +96,7 @@ def main():
         REP_CLASSIFIER.train(row)
 
     # Print 10 most common features in classifier, along with class info.
+    print "\nMOST COMMON REP FEATURES:\n"
     REP_CLASSIFIER.print_common_features()
 
     # Test the classifier.
@@ -106,6 +108,7 @@ def main():
     for row in training_set:
         SEN_CLASSIFIER.train(row)
 
+    print "\nMOST COMMON SEN FEATURES:\n"
     SEN_CLASSIFIER.print_common_features()
     
     # Test the classifier.
