@@ -192,10 +192,10 @@ class TweetClassifier():
 
         # Comment first four lines out, depending on how I treat moderates.
         
-        if score < 0:
-            return 'R'
-        elif score > 0:
-            return 'D'
+#         if score < 0:
+#             return 'R'
+#         elif score > 0:
+#             return 'D'
         return party
 
     #######
