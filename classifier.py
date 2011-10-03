@@ -72,10 +72,10 @@ class TweetClassifier():
 
         if word.find('http://') > -1:
             word = '*link*'
-        elif word.find('@') > -1:
-            word = '*tweet_at*'
-        elif word.find('#') > -1:
-            word = '*hashtag*'
+        #elif word.find('@') > -1:
+        #    word = '*tweet_at*'
+        #elif word.find('#') > -1:
+        #    word = '*hashtag*'
 
         return float(self.get_feature_count_in_class(word, "D")) + \
                self.get_feature_count_in_class(word, "R")
@@ -87,10 +87,10 @@ class TweetClassifier():
         """
         if word.find('http://') > -1:
             return float(self.features['*link*'][tweet_class]['count'])
-        elif word.find('@') > -1:
-            return float(self.features['*tweet_at*'][tweet_class]['count'])
-        elif word.find('#') > -1:
-            return float(self.features['*hashtag*'][tweet_class]['count'])
+        #elif word.find('@') > -1:
+        #    return float(self.features['*tweet_at*'][tweet_class]['count'])
+        #elif word.find('#') > -1:
+        #    return float(self.features['*hashtag*'][tweet_class]['count'])
         elif word in self.features:
             try:
                 return float(self.features[word][tweet_class]['count'])
@@ -151,35 +151,16 @@ class TweetClassifier():
         self.features[word][tweet_class]['weight'] += abs(score)/100 
         self.features[word][tweet_class]['count'] += 1
         self.features[word]['total'] += 1
-
-    # Replace these three functions with a single, special function.
-    def inc_tweet_at(self, score, tweet_class):
-        """ 
-        Increase tweet_at by legislator's vote score, and increase tally
-        by one.
+    
+    def inc_special_feature(self, score, elem_type, tweet_class):
         """
-        self.features['*tweet_at*'][tweet_class]['weight'] += abs(score)/100
-        self.features['*tweet_at*'][tweet_class]['count'] += 1
-        self.features['*tweet_at*']['total'] += 1
-
-    def inc_link(self, score, tweet_class):
-        """ 
-        Increase link count by legislator's vote score, and increase tally
-        by one.
+        Function for merging all hashes, all @'s, all links into one element
+        label.
         """
-        self.features['*link*'][tweet_class]['weight'] += abs(score)/100
-        self.features['*link*'][tweet_class]['count'] += 1
-        self.features['*link*']['total'] += 1
-
-    def inc_hashtag(self, score, tweet_class):
-        """ 
-        Increment the effect of a hashtag by 'votescore'. Also tally
-        number of total hashtags that appear.
-        """
-        self.features['*hashtag*'][tweet_class]['weight'] += abs(score)/100
-        self.features['*hashtag*'][tweet_class]['count'] += 1
-        self.features['*hashtag*']['total'] += 1
-    #/replace
+        
+        self.features[elem_type][tweet_class]['weight'] += abs(score)/100
+        self.features[elem_type][tweet_class]['count'] += 1
+        self.features[elem_type]['total'] += 1
 
     def id_voter_party(self, score, party):
         """ 
@@ -213,14 +194,14 @@ class TweetClassifier():
             # Hashtag or @? Inc and move on.
             if word in self.exclusions:
                 continue
-            elif word.find('@') > -1:
-                self.inc_tweet_at(score, tweet_class)
-                continue
-            elif word.find('#') > -1:
-                self.inc_hashtag(score, tweet_class)
-                continue
+            #elif word.find('@') > -1:
+            #    self.inc_special_element(score, "*tweet_at*", tweet_class)
+            #    continue
+            #elif word.find('#') > -1:
+            #    self.inc_hashtag(score, "*hashtag*", tweet_class)
+            #    continue
             elif word.find('http') > -1:
-                self.inc_link(score, tweet_class)
+                self.inc_link(score, "*link*", tweet_class)
                 continue
 
             # Otherwise, increment count for this word.
